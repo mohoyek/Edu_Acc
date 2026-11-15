@@ -1,0 +1,206 @@
+// ساختار داده‌ی «حسابدار شو»
+// توجه: SQLite از enum پشتیبانی نمی‌کند؛ مقادیر محدود در کد با union type بررسی می‌شوند.
+// مبالغ همیشه به‌صورت عدد صحیح ریال ذخیره می‌شوند.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------- کاربر و انگیزه ----------------
+
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  name            String?
+  passwordHash    String
+  points          Int      @default(0)
+  level           Int      @default(1)
+  streak          Int      @default(0)
+  lastActivityAt  DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  company          Company?
+  lessonProgress   LessonProgress[]
+  quizAttempts     QuizAttempt[]
+  exerciseAttempts ExerciseAttempt[]
+  userBadges       UserBadge[]
+}
+
+model Company {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String   @default("شرکت من")
+  createdAt DateTime @default(now())
+
+  entries JournalEntry[]
+}
+
+// ---------------- فهرست حساب‌ها ----------------
+
+model Account {
+  id           String   @id @default(cuid())
+  code         String   @unique // کد استاندارد حساب
+  name         String   // نام فارسی حساب
+  type         String   // asset | liability | equity | revenue | expense
+  normalBalance String  // debit | credit
+  isDefault    Boolean  @default(true) // جزو فهرست اولیه seed
+  createdAt    DateTime @default(now())
+}
+
+// ---------------- درس و محتوا ----------------
+
+model Lesson {
+  id             String   @id @default(cuid())
+  slug           String   @unique
+  level          Int      // 1 یا 2
+  order          Int
+  title          String
+  summary        String
+  // مسیر فایل MDX در content/lessons/<slug>.mdx
+  contentSlug    String
+  // آرایه‌ای از slug اصطلاحات فرهنگ لغت مرتبط
+  glossarySlugs  Json     @default("[]")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  exercises      Exercise[]
+  progress       LessonProgress[]
+  quizAttempts   QuizAttempt[]
+}
+
+model GlossaryTerm {
+  id         String   @id @default(cuid())
+  slug       String   @unique
+  term       String
+  definition String
+  example    String?
+  createdAt  DateTime @default(now())
+}
+
+// ---------------- پیشرفت و کوییز ----------------
+
+model LessonProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  lessonId    String
+  status      String   @default("not_started") // not_started | in_progress | completed
+  quizScore   Int?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+}
+
+model QuizAttempt {
+  id         String   @id @default(cuid())
+  userId     String
+  lessonId   String
+  score      Int
+  total      Int
+  passed     Boolean
+  answersJson Json    // پاسخ‌های کاربر و توضیح‌ها
+  createdAt  DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+}
+
+// ---------------- تمرین ثبت سند ----------------
+
+// هر تمرین می‌تواند چند پاسخ مجاز داشته باشد.
+// allowedAnswers: آرایه‌ای از پاسخ‌ها؛ هر پاسخ = آرایه‌ای از ردیف‌ها
+// هر ردیف: { accountCode, debit, credit } (هرگاه یکی صفر باشد)
+model Exercise {
+  id             String   @id @default(cuid())
+  slug           String   @unique
+  lessonId       String?
+  title          String
+  storyText      String
+  // مثال: [[{accountCode,debit,credit}, ...], [{...}, ...]]
+  allowedAnswers Json
+  hint           String?
+  solution       Json     // پاسخ نمونه برای نمایش
+  createdAt      DateTime @default(now())
+
+  lesson          Lesson?  @relation(fields: [lessonId], references: [id])
+  exerciseAttempts ExerciseAttempt[]
+  entries         JournalEntry[]
+}
+
+model ExerciseAttempt {
+  id         String   @id @default(cuid())
+  userId     String
+  exerciseId String
+  passed     Boolean
+  feedback   String
+  linesJson  Json
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+}
+
+// ---------------- شرکت مجازی و سندها ----------------
+
+model JournalEntry {
+  id          String   @id @default(cuid())
+  companyId   String
+  exerciseId  String?
+  date        DateTime // میلادی در دیتابیس
+  description String
+  source      String   @default("exercise") // exercise | manual | seed
+  createdAt   DateTime @default(now())
+
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  exercise  Exercise? @relation(fields: [exerciseId], references: [id])
+  lines     JournalLine[]
+}
+
+model JournalLine {
+  id          String @id @default(cuid())
+  entryId     String
+  accountCode String
+  debit       Int    @default(0) // ریال
+  credit      Int    @default(0) // ریال
+
+  entry JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@index([entryId])
+  @@index([accountCode])
+}
+
+// ---------------- نشان‌ها ----------------
+
+model Badge {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  description String
+  icon        String
+  createdAt   DateTime @default(now())
+
+  userBadges UserBadge[]
+}
+
+model UserBadge {
+  id        String   @id @default(cuid())
+  userId    String
+  badgeId   String
+  awardedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+}
