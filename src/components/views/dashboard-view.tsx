@@ -35,7 +35,7 @@ const MODULES = [
     title: "مسیر یادگیری",
     desc: "درس‌های سطح ۱ و ۲ با کوییز.",
     path: "/path",
-    stage: 2,
+    stage: 0,
   },
   {
     icon: ClipboardList,
@@ -144,15 +144,15 @@ export function DashboardView() {
         </div>
       </div>
 
-      <Card className="border-dashed border-border bg-secondary/40">
+      <Card className="border-dashed border-border bg-primary/5">
         <CardContent className="flex flex-col items-center gap-3 p-6 text-center">
           <BookOpen className="h-8 w-8 text-primary" />
           <p className="font-semibold text-foreground">آماده‌ای شروع کنی؟</p>
           <p className="text-sm text-muted-foreground">
-            درس اول در مرحله‌ی دوم اضافه می‌شود. فعلاً حسابت را بساز و منتظر باش.
+            با درس «دارایی و بدهی» شروع کن و قدم‌به‌قدم جلو برو.
           </p>
-          <Button variant="outline" onClick={() => navigate("/path")}>
-            پیش‌نمایش مسیر یادگیری
+          <Button onClick={() => navigate("/path")}>
+            رفتن به مسیر یادگیری
           </Button>
         </CardContent>
       </Card>
