@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
 
 export const authOptions: NextAuthOptions = {
+  // در تولید حتماً باید NEXTAUTH_SECRET تنظیم شده باشد
+  secret: process.env.NEXTAUTH_SECRET,
   session: {
     strategy: "jwt",
   },
