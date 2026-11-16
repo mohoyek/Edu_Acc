@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
 };
 
 // فعال‌سازی پردازش MDX برای import کردن فایل‌های content/lessons/*.mdx
-// توجه: جدول‌ها به‌صورت HTML table در فایل‌های MDX نوشته می‌شوند تا نیازی به remark-gfm
-// (که با Turbopack سازگار نیست) نباشد.
-export default createMDX(nextConfig);
+// توجه: createMDX برمی‌گرداند (pluginOptions) => (inputConfig) => config
+// پس شکل صحیح: createMDX()(nextConfig) تا nextConfig به‌عنوان inputConfig اعمال شود.
+// جدول‌ها به‌صورت HTML table در فایل‌های MDX نوشته می‌شوند تا نیازی به remark-gfm نباشد.
+export default createMDX()(nextConfig);

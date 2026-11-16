@@ -4,6 +4,8 @@ import { PrismaClient } from "@prisma/client";
 import { ACCOUNTS } from "../src/data/accounts";
 import { LESSONS } from "../src/data/lessons";
 import { GLOSSARY } from "../src/data/glossary";
+import { EXERCISES } from "../src/data/exercises";
+import { BADGE_DEFINITIONS } from "../src/lib/badges";
 
 const prisma = new PrismaClient();
 
@@ -76,10 +78,59 @@ async function seedLessons() {
   console.log(`  ✓ ${await prisma.lesson.count()} درس`);
 }
 
+async function seedExercises() {
+  console.log("→ seeding تمرین‌های ثبت سند…");
+  for (const ex of EXERCISES) {
+    let lessonId: string | null = null;
+    if (ex.lessonSlug) {
+      const lesson = await prisma.lesson.findUnique({
+        where: { slug: ex.lessonSlug },
+        select: { id: true },
+      });
+      lessonId = lesson?.id ?? null;
+    }
+    await prisma.exercise.upsert({
+      where: { slug: ex.slug },
+      update: {
+        lessonId,
+        title: ex.title,
+        storyText: ex.storyText,
+        allowedAnswers: ex.allowedAnswers as object,
+        hint: ex.hint,
+        solution: ex.solution as object,
+      },
+      create: {
+        slug: ex.slug,
+        lessonId,
+        title: ex.title,
+        storyText: ex.storyText,
+        allowedAnswers: ex.allowedAnswers as object,
+        hint: ex.hint,
+        solution: ex.solution as object,
+      },
+    });
+  }
+  console.log(`  ✓ ${await prisma.exercise.count()} تمرین`);
+}
+
+async function seedBadges() {
+  console.log("→ seeding نشان‌ها…");
+  for (const b of BADGE_DEFINITIONS) {
+    await prisma.badge.upsert({
+      where: { slug: b.slug },
+      update: { title: b.title, description: b.description, icon: b.icon },
+      create: { slug: b.slug, title: b.title, description: b.description, icon: b.icon },
+    });
+  }
+  console.log(`  ✓ ${await prisma.badge.count()} نشان`);
+}
+
 async function main() {
   await seedAccounts();
   await seedGlossary();
   await seedLessons();
+  await seedExercises();
+  await seedBadges();
   console.log("✅ seed کامل شد.");
 }
 

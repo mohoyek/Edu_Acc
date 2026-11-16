@@ -80,9 +80,12 @@ export async function POST(req: Request) {
       pointsAwarded = POINTS_PER_LESSON;
       await db.user.update({
         where: { id: user.id },
-        data: { points: { increment: POINTS_PER_LESSON }, lastActivityAt: new Date() },
+        data: { points: { increment: POINTS_PER_LESSON } },
       });
     }
+    // همگام‌سازی رکورد روزانه (streak) پس از هر کوییز
+    const { syncUserStreak } = await import("@/lib/progress-server");
+    await syncUserStreak(user.id);
   } else if (!existing) {
     // حداقل به‌عنوان in_progress علامت بزن
     await db.lessonProgress.create({

@@ -26,8 +26,8 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { label: "داشبورد", path: "/dashboard", icon: LayoutDashboard, match: ["/dashboard", "/"] },
   { label: "مسیر یادگیری", path: "/path", icon: BookOpen, match: ["/path", "/lessons"] },
-  { label: "تمرین ثبت سند", path: "/exercises", icon: ClipboardList, stage: 3, match: ["/exercises", "/exercise"] },
-  { label: "گزارش‌ها", path: "/reports", icon: BookText, stage: 4, match: ["/reports"] },
+  { label: "تمرین ثبت سند", path: "/exercises", icon: ClipboardList, match: ["/exercises", "/exercise"] },
+  { label: "گزارش‌ها", path: "/reports", icon: BookText, match: ["/reports"] },
   { label: "فرهنگ لغت", path: "/glossary", icon: Sparkles, match: ["/glossary"] },
 ];
 

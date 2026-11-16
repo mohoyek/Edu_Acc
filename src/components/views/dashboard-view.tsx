@@ -2,158 +2,200 @@
 
 import { useEffect, useState } from "react";
 import {
+  Award,
   BookOpen,
   ClipboardList,
   Flame,
-  BookText,
-  LayoutDashboard,
-  Lock,
+  GraduationCap,
+  Lightbulb,
+  Loader2,
   Medal,
   Sparkles,
   TrendingUp,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "@/lib/router";
 import { toPersianDigits } from "@/lib/format/persian-digits";
+import { WeeklyActivityChart } from "@/components/dashboard/weekly-activity-chart";
 import { toast } from "@/hooks/use-toast";
 
-interface MeResponse {
-  user: {
-    id: string;
-    email: string;
-    name: string | null;
-    points: number;
-    level: number;
-    streak: number;
-  } | null;
+interface ProgressData {
+  points: number;
+  level: number;
+  streak: number;
+  levelProgress: { level: number; completed: number; total: number; percent: number }[];
+  mastery: { lessonId: string; slug: string; title: string; level: number; percent: number }[];
+  weakPoints: { slug: string; title: string; reason: string }[];
+  weeklyActivity: { dateMs: number; count: number }[];
+  stats: { totalLessons: number; completedLessons: number; totalExercises: number; solvedExercises: number };
+  badges: { slug: string; title: string; description: string; icon: string; earned: boolean }[];
 }
 
-const MODULES = [
-  {
-    icon: BookOpen,
-    title: "مسیر یادگیری",
-    desc: "درس‌های سطح ۱ و ۲ با کوییز.",
-    path: "/path",
-    stage: 0,
-  },
-  {
-    icon: ClipboardList,
-    title: "تمرین ثبت سند",
-    desc: "سند بساز و بازخورد فوری بگیر.",
-    path: "/exercises",
-    stage: 3,
-  },
-  {
-    icon: BookText,
-    title: "گزارش‌ها",
-    desc: "دفتر روزنامه، کل، تراز آزمایشی.",
-    path: "/reports",
-    stage: 4,
-  },
-  {
-    icon: LayoutDashboard,
-    title: "داشبورد پیشرفت",
-    desc: "نمودار فعالیت و نقاط ضعف.",
-    path: "/dashboard",
-    stage: 5,
-  },
-];
+const BADGE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  BookOpen,
+  ClipboardList,
+  GraduationCap,
+  Award,
+  Flame,
+  Medal,
+};
 
 export function DashboardView() {
   const navigate = useNavigate();
-  const [me, setMe] = useState<MeResponse["user"]>(null);
+  const [data, setData] = useState<ProgressData | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/me")
+    fetch("/api/progress")
       .then((r) => r.json())
-      .then((d: MeResponse) => setMe(d.user))
-      .catch(() => toast({ title: "بارگذاری اطلاعات ناموفق", variant: "destructive" }));
+      .then(setData)
+      .catch(() => toast({ title: "بارگذاری پیشرفت ناموفق", variant: "destructive" }))
+      .finally(() => setLoading(false));
   }, []);
 
-  const greeting = me?.name ? `سلام، ${me.name}!` : "سلام!";
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!data) return null;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-extrabold text-foreground md:text-3xl">
-          {greeting}
-        </h1>
-        <p className="mt-1 text-muted-foreground">
-          به شرکت مجازی خودت خوش آمدی. از مسیر یادگیری شروع کن.
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-extrabold text-foreground md:text-3xl">
+            داشبورد پیشرفت
+          </h1>
+          <p className="mt-1 text-muted-foreground">
+            سطح {toPersianDigits(data.level)} · {toPersianDigits(data.points)} امتیاز ·{" "}
+            {toPersianDigits(data.streak)} روز رکورد
+          </p>
+        </div>
+        <Button size="sm" onClick={() => navigate("/path")}>
+          <BookOpen className="h-4 w-4" />
+          ادامه‌ی یادگیری
+        </Button>
       </div>
 
-      {/* آمار */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard
-          icon={Medal}
-          label="امتیاز"
-          value={me?.points ?? 0}
-        />
-        <StatCard icon={Sparkles} label="سطح" value={me?.level ?? 1} />
-        <StatCard icon={Flame} label="رکورد روزانه" value={me?.streak ?? 0} />
-        <StatCard icon={TrendingUp} label="درس‌های کامل‌شده" value={0} />
+        <StatCard icon={Medal} label="امتیاز" value={data.points} />
+        <StatCard icon={Flame} label="رکورد روزانه" value={data.streak} suffix="روز" />
+        <StatCard icon={BookOpen} label="درس‌های کامل" value={data.stats.completedLessons} suffix={`/${toPersianDigits(data.stats.totalLessons)}`} />
+        <StatCard icon={ClipboardList} label="تمرین‌های حل‌شده" value={data.stats.solvedExercises} suffix={`/${toPersianDigits(data.stats.totalExercises)}`} />
       </div>
 
-      {/* شرکت مجازی */}
       <Card className="border-border">
-        <CardContent className="flex items-center justify-between p-5">
-          <div>
-            <p className="text-xs text-muted-foreground">شرکت مجازی شما</p>
-            <p className="text-lg font-bold text-foreground">شرکت من</p>
-          </div>
-          <span className="rounded-full bg-secondary px-3 py-1 text-xs text-secondary-foreground">
-            آماده برای ثبت سند
-          </span>
+        <CardContent className="space-y-4 p-5">
+          <h2 className="font-bold text-foreground">پیشرفت سطوح</h2>
+          {data.levelProgress.map((lv) => (
+            <div key={lv.level}>
+              <div className="mb-1 flex items-center justify-between text-sm">
+                <span className="font-semibold text-foreground">سطح {toPersianDigits(lv.level)}</span>
+                <span className="text-muted-foreground">
+                  {toPersianDigits(lv.completed)} از {toPersianDigits(lv.total)} ({toPersianDigits(lv.percent)}٪)
+                </span>
+              </div>
+              <Progress value={lv.percent} className="h-2.5" />
+            </div>
+          ))}
         </CardContent>
       </Card>
 
-      {/* ماژول‌ها */}
-      <div>
-        <h2 className="mb-3 text-lg font-bold text-foreground">بخش‌ها</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {MODULES.map((m) => {
-            const Icon = m.icon;
-            const locked = m.stage > 1;
-            return (
-              <Card
-                key={m.path}
-                className="border-border transition-colors hover:border-primary/40"
-              >
-                <CardContent className="flex items-start gap-4 p-5">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Icon className="h-6 w-6" />
-                  </span>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-foreground">{m.title}</h3>
-                      {locked && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-[10px] text-muted-foreground">
-                          <Lock className="h-3 w-3" />
-                          مرحله {toPersianDigits(m.stage)}
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-1 text-sm text-muted-foreground">{m.desc}</p>
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="border-border">
+          <CardContent className="space-y-3 p-5">
+            <h2 className="flex items-center gap-2 font-bold text-foreground">
+              <TrendingUp className="h-5 w-5 text-primary" />
+              تسلط هر مبحث
+            </h2>
+            <div className="space-y-3">
+              {data.mastery.map((m) => (
+                <div key={m.lessonId}>
+                  <div className="mb-1 flex items-center justify-between text-sm">
+                    <span className="text-foreground">{m.title}</span>
+                    <span className="text-muted-foreground">{toPersianDigits(m.percent)}٪</span>
                   </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                  <Progress value={m.percent} className="h-2" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border">
+          <CardContent className="space-y-3 p-5">
+            <h2 className="flex items-center gap-2 font-bold text-foreground">
+              <Lightbulb className="h-5 w-5 text-primary" />
+              نقاط ضعف و پیشنهاد مرور
+            </h2>
+            {data.weakPoints.length === 0 ? (
+              <p className="text-sm text-muted-foreground">عالی! نقطه‌ی ضعف مشخصی نیست. به تلاشت ادامه بده.</p>
+            ) : (
+              <div className="space-y-2">
+                {data.weakPoints.map((w) => (
+                  <button
+                    key={w.slug}
+                    onClick={() => navigate(`/lessons/${w.slug}`)}
+                    className="flex w-full items-center justify-between rounded-lg border border-border p-3 text-right hover:border-primary/40"
+                  >
+                    <div>
+                      <p className="font-semibold text-foreground">{w.title}</p>
+                      <p className="text-xs text-muted-foreground">{w.reason}</p>
+                    </div>
+                    <span className="text-xs font-semibold text-primary">مرور ←</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      <Card className="border-dashed border-border bg-primary/5">
-        <CardContent className="flex flex-col items-center gap-3 p-6 text-center">
-          <BookOpen className="h-8 w-8 text-primary" />
-          <p className="font-semibold text-foreground">آماده‌ای شروع کنی؟</p>
-          <p className="text-sm text-muted-foreground">
-            با درس «دارایی و بدهی» شروع کن و قدم‌به‌قدم جلو برو.
-          </p>
-          <Button onClick={() => navigate("/path")}>
-            رفتن به مسیر یادگیری
-          </Button>
+      <Card className="border-border">
+        <CardContent className="space-y-3 p-5">
+          <h2 className="flex items-center gap-2 font-bold text-foreground">
+            <Sparkles className="h-5 w-5 text-primary" />
+            فعالیت هفتگی
+          </h2>
+          <WeeklyActivityChart data={data.weeklyActivity} />
+        </CardContent>
+      </Card>
+
+      <Card className="border-border">
+        <CardContent className="space-y-3 p-5">
+          <h2 className="flex items-center gap-2 font-bold text-foreground">
+            <Award className="h-5 w-5 text-primary" />
+            نشان‌ها
+          </h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {data.badges.map((b) => {
+              const Icon = BADGE_ICONS[b.icon] ?? Award;
+              return (
+                <div
+                  key={b.slug}
+                  className={`flex items-center gap-3 rounded-lg border p-3 ${
+                    b.earned ? "border-primary/40 bg-primary/5" : "border-border opacity-50"
+                  }`}
+                >
+                  <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+                    b.earned ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground"
+                  }`}>
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-bold text-foreground">{b.title}</p>
+                    <p className="text-xs text-muted-foreground">{b.description}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -164,10 +206,12 @@ function StatCard({
   icon: Icon,
   label,
   value,
+  suffix,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: number;
+  suffix?: string;
 }) {
   return (
     <Card className="border-border">
@@ -178,6 +222,7 @@ function StatCard({
         </div>
         <span className="text-2xl font-extrabold text-foreground">
           {toPersianDigits(value)}
+          {suffix ? <span className="text-sm font-normal text-muted-foreground"> {suffix}</span> : null}
         </span>
       </CardContent>
     </Card>

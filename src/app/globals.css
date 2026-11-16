@@ -134,3 +134,24 @@
     font-feature-settings: "tnum";
   }
 }
+
+/* چاپ: فقط محتوای گزارش نشان داده شود */
+@media print {
+  header,
+  aside,
+  footer,
+  .no-print {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+  }
+  body {
+    font-size: 12px;
+    background: #fff;
+    color: #000;
+  }
+  .print-block {
+    border-color: #000 !important;
+  }
+}

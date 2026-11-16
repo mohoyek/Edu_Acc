@@ -10,10 +10,12 @@ import { HomeView } from "@/components/views/home-view";
 import { LoginView } from "@/components/views/login-view";
 import { RegisterView } from "@/components/views/register-view";
 import { DashboardView } from "@/components/views/dashboard-view";
-import { ComingSoonView } from "@/components/views/coming-soon-view";
 import { PathView } from "@/components/views/path-view";
 import { LessonView } from "@/components/views/lesson-view";
 import { GlossaryView } from "@/components/views/glossary-view";
+import { ExercisesView } from "@/components/views/exercises-view";
+import { ExerciseView } from "@/components/views/exercise-view";
+import { ReportsView } from "@/components/views/reports-view";
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -77,26 +79,17 @@ export default function Home() {
     view = <PathView />;
   } else if (route === "/glossary") {
     view = <GlossaryView />;
+  } else if (route === "/exercises") {
+    view = <ExercisesView />;
   } else {
     const lessonMatch = matchRoute(route, "/lessons/:slug");
+    const exerciseMatch = matchRoute(route, "/exercise/:slug");
     if (lessonMatch) {
       view = <LessonView key={lessonMatch.slug} slug={lessonMatch.slug} />;
-    } else if (route === "/exercises" || route.startsWith("/exercise")) {
-      view = (
-        <ComingSoonView
-          title="تمرین ثبت سند"
-          stage={3}
-          description="موتور تمرین سند با بازخورد فوری به‌زودی."
-        />
-      );
+    } else if (exerciseMatch) {
+      view = <ExerciseView key={exerciseMatch.slug} slug={exerciseMatch.slug} />;
     } else if (route === "/reports") {
-      view = (
-        <ComingSoonView
-          title="گزارش‌ها"
-          stage={4}
-          description="دفتر روزنامه، دفتر کل، تراز آزمایشی و سود و زیان به‌زودی."
-        />
-      );
+      view = <ReportsView />;
     } else {
       view = <DashboardView />;
     }
