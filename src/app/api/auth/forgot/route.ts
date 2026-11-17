@@ -1,11 +1,15 @@
 // POST /api/auth/forgot — ثبت درخواست فراموشی رمز عبور برای رسیدگی مدیر
-// نکته امنیتی: پاسخ همیشه یکسان است؛ وجود یا نبودن ایمیل لو نمی‌رود.
+// شناسه‌ی ورود می‌تواند ایمیل یا نام کاربری باشد.
+// نکته امنیتی: پاسخ همیشه یکسان است؛ وجود یا نبودن حساب لو نمی‌رود.
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 
 const schema = z.object({
-  email: z.string().email("ایمیل معتبر نیست"),
+  identifier: z
+    .string()
+    .min(3, "ایمیل یا نام کاربری معتبر نیست")
+    .max(120, "ایمیل یا نام کاربری معتبر نیست"),
 });
 
 export async function POST(req: Request) {
@@ -16,8 +20,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: firstError }, { status: 400 });
   }
 
-  const email = parsed.data.email.trim().toLowerCase();
-  const user = await db.user.findUnique({ where: { email }, select: { id: true } });
+  const identifier = parsed.data.identifier.trim();
+
+  const user = await db.user.findFirst({
+    where: {
+      OR: [
+        { email: identifier.toLowerCase() },
+        { username: { equals: identifier, mode: "insensitive" } },
+      ],
+    },
+    select: { id: true },
+  });
 
   if (user) {
     // اگر درخواست در انتظارِ همین کاربر وجود دارد، درخواست جدید نساز
@@ -33,6 +46,7 @@ export async function POST(req: Request) {
   // پاسخ عمومی — بدون افشای وجود حساب
   return NextResponse.json({
     ok: true,
-    message: "اگر این ایمیل در سایت ثبت شده باشد، درخواست شما برای مدیر ارسال شد. پس از رسیدگی، رمز موقت از طریق شماره تماس شما به شما اعلام می‌شود.",
+    message:
+      "اگر این ایمیل یا نام کاربری در سایت ثبت شده باشد، درخواست شما برای مدیر ارسال شد. پس از رسیدگی، رمز موقت از طریق شماره تماس شما به شما اعلام می‌شود.",
   });
 }

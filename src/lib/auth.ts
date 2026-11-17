@@ -15,18 +15,28 @@ export const authOptions: NextAuthOptions = {
   },
   providers: [
     CredentialsProvider({
-      name: "ایمیل و رمز",
+      name: "ایمیل/نام کاربری و رمز",
       credentials: {
-        email: { label: "ایمیل", type: "email" },
+        email: { label: "ایمیل یا نام کاربری", type: "text" },
         password: { label: "رمز", type: "password" },
       },
       async authorize(credentials) {
-        const email = credentials?.email?.trim().toLowerCase();
+        // شناسه‌ی ورود می‌تواند ایمیل یا نام کاربری باشد.
+        const identifier = credentials?.email?.trim();
         const password = credentials?.password ?? "";
-        if (!email || !password) return null;
+        if (!identifier || !password) return null;
 
-        const user = await db.user.findUnique({ where: { email } });
+        const user = await db.user.findFirst({
+          where: {
+            OR: [
+              { email: identifier.toLowerCase() },
+              { username: { equals: identifier, mode: "insensitive" } },
+            ],
+          },
+        });
         if (!user) return null;
+        // حساب غیرفعال اصلاً وارد نمی‌شود (پیام عمومی، بدون افشای دلیل)
+        if (!user.isActive) return null;
         if (!verifyPassword(password, user.passwordHash)) return null;
 
         return {

@@ -8,9 +8,14 @@ import {
   Eye,
   EyeOff,
   Flame,
+  KeyRound,
   Loader2,
   RefreshCw,
   ShieldCheck,
+  ShieldOff,
+  Trash2,
+  UserCheck,
+  UserX,
   Users,
   X,
 } from "lucide-react";
@@ -18,6 +23,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -37,6 +44,8 @@ import {
 } from "@/components/ui/dialog";
 import { toPersianDigits } from "@/lib/format/persian-digits";
 import { formatJalali } from "@/lib/format/jalali";
+import { generateTempPassword } from "@/lib/password-reset";
+import type { AdminAction } from "@/lib/admin-actions";
 import { toast } from "@/hooks/use-toast";
 
 interface AdminUserRow {
@@ -44,9 +53,11 @@ interface AdminUserRow {
   name: string | null;
   firstName: string | null;
   lastName: string | null;
+  username: string | null;
   email: string;
   phone: string | null;
   role: string;
+  isActive: boolean;
   points: number;
   level: number;
   streak: number;
@@ -78,8 +89,10 @@ interface ResetRequest {
   user: {
     id: string;
     name: string | null;
+    username?: string | null;
     email: string;
     phone: string | null;
+    isActive?: boolean;
     createdAt?: string;
   };
 }
@@ -113,6 +126,7 @@ interface UserDetail {
 export function AdminView() {
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [viewerId, setViewerId] = useState<string | null>(null);
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [pending, setPending] = useState<ResetRequest[]>([]);
@@ -122,6 +136,15 @@ export function AdminView() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [workingId, setWorkingId] = useState<string | null>(null);
   const [tempDialog, setTempDialog] = useState<{ name: string; password: string } | null>(null);
+
+  // دیالوگ تغییر رمز توسط مدیر
+  const [pwUser, setPwUser] = useState<AdminUserRow | null>(null);
+  const [pwValue, setPwValue] = useState("");
+  const [pwLoading, setPwLoading] = useState(false);
+
+  // دیالوگ حذف کاربر
+  const [deleteUser, setDeleteUser] = useState<AdminUserRow | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const loadUsers = useCallback(async () => {
     const res = await fetch("/api/admin/users");
@@ -137,6 +160,7 @@ export function AdminView() {
     const d = await res.json();
     setUsers(d.users);
     setOverview(d.overview);
+    setViewerId(d.viewerId ?? null);
     setRole("ADMIN");
   }, []);
 
@@ -172,6 +196,105 @@ export function AdminView() {
       setExpandedId(null);
     } finally {
       setDetailLoading(false);
+    }
+  }
+
+  // ارتقا / تنزل / فعال‌سازی / غیرفعال‌سازی
+  async function handleAction(user: AdminUserRow, action: AdminAction) {
+    setWorkingId(user.id);
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({
+          title: "عملیات ناموفق",
+          description: data?.error ?? "خطایی رخ داد.",
+          variant: "destructive",
+        });
+        return;
+      }
+      toast({ title: data.message ?? "انجام شد" });
+      await loadUsers();
+    } catch {
+      toast({ title: "خطا", description: "اتصال به سرور ناموفق بود.", variant: "destructive" });
+    } finally {
+      setWorkingId(null);
+    }
+  }
+
+  // تغییر رمز کاربر توسط مدیر
+  async function handleSetPassword() {
+    if (!pwUser) return;
+    if (pwValue.trim().length < 6) {
+      toast({
+        title: "رمز کوتاه است",
+        description: "رمز باید حداقل ۶ کاراکتر باشد.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setPwLoading(true);
+    try {
+      const res = await fetch(`/api/admin/users/${pwUser.id}/password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pwValue }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({
+          title: "تغییر رمز ناموفق",
+          description: data?.error ?? "خطایی رخ داد.",
+          variant: "destructive",
+        });
+        return;
+      }
+      toast({
+        title: "رمز تغییر کرد",
+        description: "رمز جدید را با تلفن یا پیام‌رسان به کاربر اعلام کنید.",
+      });
+      setPwUser(null);
+      setPwValue("");
+      await Promise.all([loadUsers(), loadResets()]);
+    } catch {
+      toast({ title: "خطا", description: "اتصال به سرور ناموفق بود.", variant: "destructive" });
+    } finally {
+      setPwLoading(false);
+    }
+  }
+
+  // حذف کامل کاربر
+  async function handleDelete() {
+    if (!deleteUser) return;
+    setDeleteLoading(true);
+    try {
+      const res = await fetch(`/api/admin/users/${deleteUser.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({
+          title: "حذف ناموفق",
+          description: data?.error ?? "خطایی رخ داد.",
+          variant: "destructive",
+        });
+        return;
+      }
+      toast({ title: "کاربر حذف شد", description: data.message });
+      setDeleteUser(null);
+      if (expandedId === deleteUser.id) {
+        setExpandedId(null);
+        setDetail(null);
+      }
+      await Promise.all([loadUsers(), loadResets()]);
+    } catch {
+      toast({ title: "خطا", description: "اتصال به سرور ناموفق بود.", variant: "destructive" });
+    } finally {
+      setDeleteLoading(false);
     }
   }
 
@@ -244,7 +367,9 @@ export function AdminView() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-extrabold text-foreground md:text-3xl">پنل مدیر</h1>
-          <p className="mt-1 text-muted-foreground">کاربران، پیشرفت آن‌ها و درخواست‌های فراموشی رمز</p>
+          <p className="mt-1 text-muted-foreground">
+            کاربران، پیشرفت آن‌ها، درخواست‌های فراموشی رمز و مدیریت حساب‌ها
+          </p>
         </div>
         <Button
           variant="outline"
@@ -327,6 +452,7 @@ export function AdminView() {
                     <TableHead>نشان</TableHead>
                     <TableHead>ثبت‌نام</TableHead>
                     <TableHead>جزئیات</TableHead>
+                    <TableHead>عملیات</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -334,15 +460,23 @@ export function AdminView() {
                     <AdminUserRowView
                       key={u.id}
                       user={u}
+                      viewerId={viewerId}
                       expanded={expandedId === u.id}
                       detail={detail}
                       detailLoading={detailLoading && expandedId === u.id}
+                      working={workingId === u.id}
                       onToggle={() => toggleDetail(u.id)}
+                      onAction={handleAction}
+                      onOpenPassword={(x) => {
+                        setPwValue("");
+                        setPwUser(x);
+                      }}
+                      onOpenDelete={setDeleteUser}
                     />
                   ))}
                   {users.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
+                      <TableCell colSpan={10} className="py-8 text-center text-muted-foreground">
                         هنوز کاربری ثبت‌نام نکرده است.
                       </TableCell>
                     </TableRow>
@@ -456,6 +590,78 @@ export function AdminView() {
         </TabsContent>
       </Tabs>
 
+      {/* دیالوگ تغییر رمز کاربر */}
+      <Dialog open={pwUser !== null} onOpenChange={(open) => !open && setPwUser(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>تغییر رمز کاربر</DialogTitle>
+            <DialogDescription>
+              رمز جدید برای «{pwUser?.name ?? pwUser?.email}» را تعیین کنید و خارج از سایت
+              (تلفن یا پیام‌رسان) به او اعلام کنید.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground" dir="ltr">
+              {pwUser?.email}
+              {pwUser?.username ? ` · ${pwUser.username}` : ""}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-password">رمز جدید</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="new-password"
+                  type="text"
+                  dir="ltr"
+                  placeholder="حداقل ۶ کاراکتر"
+                  value={pwValue}
+                  onChange={(e) => setPwValue(e.target.value)}
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setPwValue(generateTempPassword(8))}
+                >
+                  تولید رمز موقت
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setPwUser(null)}>
+              انصراف
+            </Button>
+            <Button onClick={handleSetPassword} disabled={pwLoading || pwValue.trim().length < 6}>
+              {pwLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+              ذخیره رمز جدید
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* دیالوگ حذف کاربر */}
+      <Dialog open={deleteUser !== null} onOpenChange={(open) => !open && setDeleteUser(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-destructive">حذف کاربر</DialogTitle>
+            <DialogDescription>
+              با حذف «{deleteUser?.name ?? deleteUser?.email}» همه‌ی داده‌های او برای همیشه پاک
+              می‌شود: شرکت مجازی، سندها، پیشرفت درس‌ها، تلاش‌های تمرین و نشان‌ها. این عمل قابل
+              بازگشت نیست.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeleteUser(null)}>
+              انصراف
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleteLoading}>
+              {deleteLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+              حذف همیشگی
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* دیالوگ نمایش رمز موقت — فقط یک‌بار */}
       <Dialog open={tempDialog !== null} onOpenChange={(open) => !open && setTempDialog(null)}>
         <DialogContent className="sm:max-w-md">
@@ -492,30 +698,53 @@ export function AdminView() {
 
 function AdminUserRowView({
   user,
+  viewerId,
   expanded,
   detail,
   detailLoading,
+  working,
   onToggle,
+  onAction,
+  onOpenPassword,
+  onOpenDelete,
 }: {
   user: AdminUserRow;
+  viewerId: string | null;
   expanded: boolean;
   detail: UserDetail | null;
   detailLoading: boolean;
+  working: boolean;
   onToggle: () => void;
+  onAction: (user: AdminUserRow, action: AdminAction) => void | Promise<void>;
+  onOpenPassword: (user: AdminUserRow) => void;
+  onOpenDelete: (user: AdminUserRow) => void;
 }) {
+  const isSelf = viewerId === user.id;
+
   return (
     <>
-      <TableRow className="cursor-pointer" onClick={onToggle}>
+      <TableRow
+        className={`cursor-pointer ${!user.isActive ? "opacity-60" : ""}`}
+        onClick={onToggle}
+      >
         <TableCell>
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-foreground">{user.name ?? "بدون نام"}</span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className={`font-medium text-foreground ${!user.isActive ? "line-through decoration-muted-foreground/50" : ""}`}>
+              {user.name ?? "بدون نام"}
+            </span>
             {user.role === "ADMIN" && (
               <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
                 مدیر
               </Badge>
             )}
+            {!user.isActive && (
+              <Badge variant="outline" className="h-5 border-destructive/40 px-1.5 text-[10px] text-destructive">
+                غیرفعال
+              </Badge>
+            )}
           </div>
           <span className="text-xs text-muted-foreground" dir="ltr">
+            {user.username ? `${user.username} · ` : ""}
             {user.email}
           </span>
         </TableCell>
@@ -548,10 +777,100 @@ function AdminUserRowView({
             {expanded ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </Button>
         </TableCell>
+        <TableCell onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-0.5">
+            {/* تغییر رمز — همیشه در دسترس */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              title="تغییر رمز"
+              aria-label="تغییر رمز"
+              disabled={working}
+              onClick={() => onOpenPassword(user)}
+            >
+              <KeyRound className="h-4 w-4" />
+            </Button>
+
+            {/* ارتقا به مدیر */}
+            {user.role !== "ADMIN" && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                title="ارتقا به مدیر"
+                aria-label="ارتقا به مدیر"
+                disabled={working}
+                onClick={() => onAction(user, "promote")}
+              >
+                <ShieldCheck className="h-4 w-4 text-emerald-600" />
+              </Button>
+            )}
+
+            {/* سلب مدیریت */}
+            {user.role === "ADMIN" && !isSelf && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                title="سلب مدیریت"
+                aria-label="سلب مدیریت"
+                disabled={working}
+                onClick={() => onAction(user, "demote")}
+              >
+                <ShieldOff className="h-4 w-4 text-amber-600" />
+              </Button>
+            )}
+
+            {/* غیرفعال‌سازی / فعال‌سازی */}
+            {isSelf ? null : user.isActive ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                title="غیرفعال‌سازی حساب"
+                aria-label="غیرفعال‌سازی حساب"
+                disabled={working}
+                onClick={() => onAction(user, "deactivate")}
+              >
+                <UserX className="h-4 w-4 text-orange-600" />
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                title="فعال‌سازی حساب"
+                aria-label="فعال‌سازی حساب"
+                disabled={working}
+                onClick={() => onAction(user, "activate")}
+              >
+                <UserCheck className="h-4 w-4 text-emerald-600" />
+              </Button>
+            )}
+
+            {/* حذف */}
+            {!isSelf && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                title="حذف کاربر"
+                aria-label="حذف کاربر"
+                disabled={working}
+                onClick={() => onOpenDelete(user)}
+              >
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            )}
+
+            {working && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+          </div>
+        </TableCell>
       </TableRow>
       {expanded && (
         <TableRow>
-          <TableCell colSpan={9} className="bg-muted/30 p-4">
+          <TableCell colSpan={10} className="bg-muted/30 p-4">
             {detailLoading || !detail ? (
               <div className="flex items-center justify-center py-6">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />

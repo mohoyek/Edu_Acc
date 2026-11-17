@@ -27,9 +27,11 @@ export async function GET(req: Request) {
       name: true,
       firstName: true,
       lastName: true,
+      username: true,
       email: true,
       phone: true,
       role: true,
+      isActive: true,
       points: true,
       level: true,
       streak: true,
@@ -129,6 +131,7 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     users: rows,
+    viewerId: admin.id,
     overview: {
       totalUsers: users.length,
       activeLastWeek,
@@ -147,9 +150,11 @@ async function userDetail(id: string) {
       name: true,
       firstName: true,
       lastName: true,
+      username: true,
       email: true,
       phone: true,
       role: true,
+      isActive: true,
       points: true,
       level: true,
       streak: true,

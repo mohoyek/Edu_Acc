@@ -32,7 +32,8 @@ export function LoginView() {
     if (res?.error) {
       toast({
         title: "ورود ناموفق",
-        description: "ایمیل یا رمز اشتباه است.",
+        description:
+          "اطلاعات ورود اشتباه است یا حساب شما غیرفعال شده است.",
         variant: "destructive",
       });
       return;
@@ -48,7 +49,7 @@ export function LoginView() {
       const res = await fetch("/api/auth/forgot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: forgotEmail }),
+        body: JSON.stringify({ identifier: forgotEmail }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -94,17 +95,17 @@ export function LoginView() {
             ) : (
               <form onSubmit={handleForgot} className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  ایمیل حساب خود را وارد کنید تا درخواست بازیابی رمز برای مدیر
-                  ارسال شود.
+                  ایمیل یا نام کاربری حساب خود را وارد کنید تا درخواست بازیابی رمز
+                  برای مدیر ارسال شود.
                 </p>
                 <div className="space-y-2">
-                  <Label htmlFor="forgot-email">ایمیل</Label>
+                  <Label htmlFor="forgot-email">ایمیل یا نام کاربری</Label>
                   <Input
                     id="forgot-email"
-                    type="email"
+                    type="text"
                     required
                     dir="ltr"
-                    placeholder="you@example.com"
+                    placeholder="you@example.com یا MoHoYek"
                     value={forgotEmail}
                     onChange={(e) => setForgotEmail(e.target.value)}
                   />
@@ -137,13 +138,13 @@ export function LoginView() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">ایمیل</Label>
+              <Label htmlFor="email">ایمیل یا نام کاربری</Label>
               <Input
                 id="email"
-                type="email"
+                type="text"
                 required
                 dir="ltr"
-                placeholder="you@example.com"
+                placeholder="you@example.com یا MoHoYek"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />

@@ -20,8 +20,10 @@ export async function GET() {
         select: {
           id: true,
           name: true,
+          username: true,
           email: true,
           phone: true,
+          isActive: true,
           createdAt: true,
         },
       },
@@ -33,7 +35,7 @@ export async function GET() {
     orderBy: { resolvedAt: "desc" },
     take: 20,
     include: {
-      user: { select: { id: true, name: true, email: true } },
+      user: { select: { id: true, name: true, username: true, email: true } },
       resolver: { select: { name: true, email: true } },
     },
   });
@@ -58,7 +60,9 @@ export async function POST(req: Request) {
 
   const request = await db.passwordResetRequest.findUnique({
     where: { id: parsed.data.requestId },
-    include: { user: { select: { id: true, name: true, email: true } } },
+    include: {
+      user: { select: { id: true, name: true, username: true, email: true } },
+    },
   });
   if (!request) {
     return NextResponse.json({ error: "درخواست یافت نشد" }, { status: 404 });
@@ -90,6 +94,10 @@ export async function POST(req: Request) {
     ok: true,
     action: "reset",
     tempPassword, // فقط همین یک‌بار نمایش داده می‌شود
-    user: { name: request.user.name, email: request.user.email },
+    user: {
+      name: request.user.name,
+      username: request.user.username,
+      email: request.user.email,
+    },
   });
 }
