@@ -33,7 +33,7 @@ export function LoginView() {
       toast({
         title: "ورود ناموفق",
         description:
-          "اطلاعات ورود اشتباه است یا حساب شما غیرفعال شده است.",
+          "شماره تماس/نام کاربری یا رمز اشتباه است، یا حساب شما غیرفعال شده است.",
         variant: "destructive",
       });
       return;
@@ -95,17 +95,17 @@ export function LoginView() {
             ) : (
               <form onSubmit={handleForgot} className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  ایمیل یا نام کاربری حساب خود را وارد کنید تا درخواست بازیابی رمز
-                  برای مدیر ارسال شود.
+                  شماره تماس، نام کاربری یا ایمیل حساب خود را وارد کنید تا درخواست
+                  بازیابی رمز برای مدیر ارسال شود.
                 </p>
                 <div className="space-y-2">
-                  <Label htmlFor="forgot-email">ایمیل یا نام کاربری</Label>
+                  <Label htmlFor="forgot-email">شماره تماس، نام کاربری یا ایمیل</Label>
                   <Input
                     id="forgot-email"
                     type="text"
                     required
                     dir="ltr"
-                    placeholder="you@example.com یا MoHoYek"
+                    placeholder="09123456789 یا MoHoYek"
                     value={forgotEmail}
                     onChange={(e) => setForgotEmail(e.target.value)}
                   />
@@ -138,13 +138,13 @@ export function LoginView() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">ایمیل یا نام کاربری</Label>
+              <Label htmlFor="email">شماره تماس، نام کاربری یا ایمیل</Label>
               <Input
                 id="email"
                 type="text"
                 required
                 dir="ltr"
-                placeholder="you@example.com یا MoHoYek"
+                placeholder="09123456789 یا MoHoYek"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />

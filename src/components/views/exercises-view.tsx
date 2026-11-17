@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "@/lib/router";
 import { toPersianDigits } from "@/lib/format/persian-digits";
+import { ProfileGate } from "@/components/exercise/profile-gate";
 import { toast } from "@/hooks/use-toast";
 
 interface ExerciseListItem {
@@ -19,11 +20,18 @@ export function ExercisesView() {
   const navigate = useNavigate();
   const [items, setItems] = useState<ExerciseListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  // هشدار پروفایل ناقص بالای فهرست تمرین‌ها
+  const [profileBlocked, setProfileBlocked] = useState(false);
 
   useEffect(() => {
-    fetch("/api/exercises")
-      .then((r) => r.json())
-      .then((d) => setItems(d.exercises ?? []))
+    Promise.all([
+      fetch("/api/exercises").then((r) => r.json()),
+      fetch("/api/me").then((r) => r.json()),
+    ])
+      .then(([d, m]) => {
+        setItems(d.exercises ?? []);
+        setProfileBlocked(m?.mustCompleteProfile === true);
+      })
       .catch(() => toast({ title: "بارگذاری ناموفق", variant: "destructive" }))
       .finally(() => setLoading(false));
   }, []);
@@ -49,6 +57,8 @@ export function ExercisesView() {
           هر تمرین درست، در دفتر شرکت مجازی‌ات ثبت می‌شود.
         </p>
       </div>
+
+      {profileBlocked && <ProfileGate />}
 
       <div className="grid gap-3">
         {items.map((it, i) => (

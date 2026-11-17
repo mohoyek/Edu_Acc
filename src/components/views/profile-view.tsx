@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, KeyRound, Save, ShieldCheck } from "lucide-react";
+import { Loader2, KeyRound, Save, ShieldCheck, TriangleAlert } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,11 +9,13 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toPersianDigits } from "@/lib/format/persian-digits";
 import { formatJalali } from "@/lib/format/jalali";
+import { isProfileComplete } from "@/lib/profile";
 import { toast } from "@/hooks/use-toast";
 
 interface ProfileUser {
   id: string;
-  email: string;
+  email: string | null;
+  username: string | null;
   name: string | null;
   firstName: string | null;
   lastName: string | null;
@@ -130,8 +132,27 @@ export function ProfileView() {
 
   if (!user) return null;
 
+  const complete = isProfileComplete(user);
+  const identifierValue = user.phone ?? user.username ?? user.email ?? "—";
+  const identifierLabel = user.phone
+    ? "شماره تماس (شناسه ورود)"
+    : user.username
+      ? "نام کاربری (شناسه ورود)"
+      : "ایمیل (شناسه ورود)";
+
   return (
     <div className="space-y-6">
+      {!complete && (
+        <div className="flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4">
+          <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+          <div>
+            <p className="text-sm font-bold text-foreground">پروفایل شما ناقص است</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              تا نام، نام خانوادگی و شماره تماس را تکمیل نکنی، امکان حل تمرین‌ها فعال نمی‌شود.
+            </p>
+          </div>
+        </div>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-extrabold text-foreground md:text-3xl">
@@ -221,12 +242,21 @@ export function ProfileView() {
                   onChange={(e) => setPhone(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  اگر رمزت را فراموش کنی، رمز موقت با همین شماره به تو اعلام می‌شود.
+                  شماره تماس شناسه ورود تو است و یکتاست؛ اگر رمزت را فراموش کنی، رمز موقت با همین شماره به تو اعلام می‌شود.
                 </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email-readonly">ایمیل (غیرقابل تغییر)</Label>
-                <Input id="email-readonly" type="email" dir="ltr" value={user.email} disabled />
+                <Label htmlFor="identifier-readonly">{identifierLabel}</Label>
+                <Input
+                  id="identifier-readonly"
+                  type="text"
+                  dir="ltr"
+                  value={identifierValue}
+                  disabled
+                />
+                <p className="text-xs text-muted-foreground">
+                  ایمیل اختیاری است و در ثبت‌نام گرفته نمی‌شود؛ برای تغییر شناسه با مدیر تماس بگیر.
+                </p>
               </div>
             </div>
             <Button type="submit" disabled={saving}>

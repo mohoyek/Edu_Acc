@@ -15,12 +15,12 @@ datasource db {
 
 model User {
   id              String   @id @default(cuid())
-  email           String   @unique
-  username        String?  @unique // نام کاربری اختیاری (حساب مدیر) — ورود با ایمیل یا نام کاربری
+  email           String?  @unique // اختیاری — ثبت‌نام با شماره تماس یا نام کاربری انجام می‌شود
+  username        String?  @unique // نام کاربری اختیاری — ورود با تلفن، نام کاربری یا ایمیل
   name            String? // نام نمایشی (ترکیب نام + نام خانوادگی)
   firstName       String?
   lastName        String?
-  phone           String? // شماره تماس نرمال‌شده (۰ + ۱۰ رقم)
+  phone           String?  @unique // شماره تماس نرمال‌شده و یکتا (شناسه ورود)
   role            String   @default("USER") // USER | ADMIN (بدون enum)
   isActive        Boolean  @default(true) // حساب غیرفعال امکان ورود و استفاده ندارد
   passwordHash    String

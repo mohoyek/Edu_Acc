@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateProfile, displayName } from "@/lib/profile";
+import { validateProfile, displayName, isProfileComplete } from "@/lib/profile";
 
 describe("validateProfile", () => {
   it("پروفایل معتبر را می‌پذیرد و مقادیر را پاک می‌کند", () => {
@@ -54,5 +54,28 @@ describe("displayName", () => {
 
   it("فاصله‌های اضافی را حذف می‌کند", () => {
     expect(displayName(" علی ", " رضایی ")).toBe("علی رضایی");
+  });
+});
+
+describe("isProfileComplete", () => {
+  it("پروفایل کامل (نام + نام خانوادگی + تلفن) → true", () => {
+    expect(
+      isProfileComplete({ firstName: "علی", lastName: "رضایی", phone: "09123456789" }),
+    ).toBe(true);
+  });
+
+  it("بدون تلفن ناقص است (تلفن برای حل تمرین اجباری است)", () => {
+    expect(isProfileComplete({ firstName: "علی", lastName: "رضایی", phone: null })).toBe(false);
+    expect(isProfileComplete({ firstName: "علی", lastName: "رضایی", phone: "" })).toBe(false);
+  });
+
+  it("بدون نام یا نام خانوادگی ناقص است", () => {
+    expect(isProfileComplete({ firstName: null, lastName: "رضایی", phone: "09123456789" })).toBe(false);
+    expect(isProfileComplete({ firstName: "علی", lastName: null, phone: "09123456789" })).toBe(false);
+    expect(isProfileComplete({ firstName: " ", lastName: "رضایی", phone: "09123456789" })).toBe(false);
+  });
+
+  it("فیلدهای undefined هم ناقص محسوب می‌شوند", () => {
+    expect(isProfileComplete({})).toBe(false);
   });
 });

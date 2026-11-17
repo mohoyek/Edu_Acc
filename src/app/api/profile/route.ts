@@ -41,6 +41,24 @@ export async function PATCH(req: Request) {
   }
 
   const { firstName, lastName, phone } = validation.values;
+
+  // شماره تماس شناسه‌ی ورود است و یکتا — اگر عوض شده، نباید به حساب دیگری بخورد
+  if (phone && phone !== user.phone) {
+    const taken = await db.user.findFirst({
+      where: { phone, id: { not: user.id } },
+      select: { id: true },
+    });
+    if (taken) {
+      return NextResponse.json(
+        {
+          error: "این شماره تماس به حساب دیگری تعلق دارد",
+          errors: { phone: "این شماره تماس قبلاً در سایت ثبت شده است" },
+        },
+        { status: 400 },
+      );
+    }
+  }
+
   const updated = await db.user.update({
     where: { id: user.id },
     data: { firstName, lastName, phone, name: displayName(firstName, lastName) },

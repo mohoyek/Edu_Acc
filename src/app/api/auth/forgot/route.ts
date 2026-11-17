@@ -1,9 +1,10 @@
 // POST /api/auth/forgot — ثبت درخواست فراموشی رمز عبور برای رسیدگی مدیر
-// شناسه‌ی ورود می‌تواند ایمیل یا نام کاربری باشد.
+// شناسه‌ی ورود می‌تواند شماره تماس، نام کاربری یا ایمیل باشد.
 // نکته امنیتی: پاسخ همیشه یکسان است؛ وجود یا نبودن حساب لو نمی‌رود.
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { normalizePhone } from "@/lib/phone";
 
 const schema = z.object({
   identifier: z
@@ -21,12 +22,14 @@ export async function POST(req: Request) {
   }
 
   const identifier = parsed.data.identifier.trim();
+  const phoneRes = normalizePhone(identifier);
 
   const user = await db.user.findFirst({
     where: {
       OR: [
-        { email: identifier.toLowerCase() },
+        { email: { equals: identifier.toLowerCase(), mode: "insensitive" } },
         { username: { equals: identifier, mode: "insensitive" } },
+        ...(phoneRes.value ? [{ phone: phoneRes.value }] : []),
       ],
     },
     select: { id: true },
@@ -47,6 +50,6 @@ export async function POST(req: Request) {
   return NextResponse.json({
     ok: true,
     message:
-      "اگر این ایمیل یا نام کاربری در سایت ثبت شده باشد، درخواست شما برای مدیر ارسال شد. پس از رسیدگی، رمز موقت از طریق شماره تماس شما به شما اعلام می‌شود.",
+      "اگر این شماره تماس، نام کاربری یا ایمیل در سایت ثبت شده باشد، درخواست شما برای مدیر ارسال شد. پس از رسیدگی، رمز موقت از طریق شماره تماس شما به شما اعلام می‌شود.",
   });
 }

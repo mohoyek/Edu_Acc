@@ -45,7 +45,7 @@ export function Header() {
                   </AvatarFallback>
                 </Avatar>
                 <span className="text-sm font-medium text-foreground">
-                  {user.name ?? user.email}
+                  {user.name ?? user.email ?? "کاربر"}
                 </span>
               </div>
               <Button

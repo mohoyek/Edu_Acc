@@ -2,6 +2,7 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { db } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
+import { normalizePhone } from "@/lib/phone";
 
 export const authOptions: NextAuthOptions = {
   // در تولید حتماً باید NEXTAUTH_SECRET تنظیم شده باشد
@@ -21,16 +22,20 @@ export const authOptions: NextAuthOptions = {
         password: { label: "رمز", type: "password" },
       },
       async authorize(credentials) {
-        // شناسه‌ی ورود می‌تواند ایمیل یا نام کاربری باشد.
+        // شناسه‌ی ورود می‌تواند شماره تماس، نام کاربری یا ایمیل باشد.
         const identifier = credentials?.email?.trim();
         const password = credentials?.password ?? "";
         if (!identifier || !password) return null;
 
+        // اگر ورودی شبیه شماره تماس بود، نرمال می‌کنیم (+98 / ارقام فارسی و …)
+        const phoneRes = normalizePhone(identifier);
+
         const user = await db.user.findFirst({
           where: {
             OR: [
-              { email: identifier.toLowerCase() },
+              { email: { equals: identifier.toLowerCase(), mode: "insensitive" } },
               { username: { equals: identifier, mode: "insensitive" } },
+              ...(phoneRes.value ? [{ phone: phoneRes.value }] : []),
             ],
           },
         });

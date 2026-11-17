@@ -61,3 +61,22 @@ export function validateProfile(input: ProfileInput): ProfileValidation {
 export function displayName(firstName: string, lastName: string): string {
   return `${firstName.trim()} ${lastName.trim()}`.trim();
 }
+
+export interface ProfileCompleteness {
+  firstName?: string | null;
+  lastName?: string | null;
+  phone?: string | null;
+}
+
+/**
+ * آیا پروفایل برای حل تمرین کامل است؟
+ * کامل = نام + نام خانوادگی + شماره تماس همه پر باشند.
+ * (ایمیل و نام کاربری در تکمیل بودن پروفایل نقشی ندارند.)
+ */
+export function isProfileComplete(u: ProfileCompleteness): boolean {
+  return Boolean(
+    (u.firstName ?? "").trim() &&
+      (u.lastName ?? "").trim() &&
+      (u.phone ?? "").trim(),
+  );
+}

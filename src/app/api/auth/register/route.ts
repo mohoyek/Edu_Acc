@@ -1,11 +1,17 @@
+// POST /api/auth/register — ثبت‌نام با شماره تماس یا نام کاربری + رمز عبور
+// ایمیل از چرخه‌ی ثبت‌نام حذف شده (در اسکیما اختیاری مانده برای سازگاری با حساب‌های قدیمی).
+// مشخصات کامل پروفایل (نام، نام خانوادگی، شماره تماس) بعد از ورود تکمیل می‌شود.
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
-import { validateProfile, displayName } from "@/lib/profile";
+import { parseIdentifier } from "@/lib/identifier";
 
 const registerSchema = z.object({
-  email: z.string().email("ایمیل معتبر نیست"),
+  identifier: z
+    .string()
+    .max(120, "شناسه خیلی طولانی است")
+    .min(1, "شماره تماس یا نام کاربری را وارد کنید"),
   password: z.string().min(6, "رمز حداقل ۶ کاراکتر"),
 });
 
@@ -16,7 +22,7 @@ export async function POST(req: Request) {
   }
 
   const parsed = registerSchema.safeParse({
-    email: body.email,
+    identifier: body.identifier ?? "",
     password: body.password,
   });
   if (!parsed.success) {
@@ -24,47 +30,38 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: firstError }, { status: 400 });
   }
 
-  // اعتبارسنجی نام/نام خانوادگی/تلفن با همان منطق پروفایل
-  const validation = validateProfile({
-    firstName: body.firstName ?? "",
-    lastName: body.lastName ?? "",
-    phone: body.phone ?? "",
-  });
-  if (!validation.ok || !validation.values) {
-    const firstError =
-      validation.errors.firstName ??
-      validation.errors.lastName ??
-      validation.errors.phone ??
-      "اطلاعات نامعتبر است";
-    return NextResponse.json({ error: firstError }, { status: 400 });
+  // تشخیص نوع شناسه: شماره تماس یا نام کاربری (با نرمال‌سازی ارقام فارسی و +98)
+  const id = parseIdentifier(parsed.data.identifier);
+  if (!id.ok || !id.value) {
+    return NextResponse.json(
+      { error: id.error ?? "شناسه معتبر نیست" },
+      { status: 400 },
+    );
   }
 
-  const email = parsed.data.email.trim().toLowerCase();
-  const { firstName, lastName, phone } = validation.values;
-
-  const existing = await db.user.findUnique({ where: { email } });
+  // بررسی یکتایی شناسه
+  const existing = await db.user.findFirst({
+    where:
+      id.kind === "phone"
+        ? { phone: id.value }
+        : { username: { equals: id.value, mode: "insensitive" } },
+    select: { id: true },
+  });
   if (existing) {
     return NextResponse.json(
-      { error: "این ایمیل قبلاً ثبت شده است" },
+      {
+        error:
+          id.kind === "phone"
+            ? "این شماره تماس قبلاً ثبت شده است"
+            : "این نام کاربری قبلاً ثبت شده است",
+      },
       { status: 409 },
     );
   }
 
-  // ایمیل‌های مدیر از متغیر محیطی ADMIN_EMAILS (جداشده با ویرگول)
-  const adminEmails = (process.env.ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
-  const role = adminEmails.includes(email) ? "ADMIN" : "USER";
-
   const user = await db.user.create({
     data: {
-      email,
-      firstName,
-      lastName,
-      phone,
-      name: displayName(firstName, lastName),
-      role,
+      ...(id.kind === "phone" ? { phone: id.value } : { username: id.value }),
       passwordHash: hashPassword(parsed.data.password),
     },
   });
@@ -74,5 +71,9 @@ export async function POST(req: Request) {
     data: { userId: user.id, name: "شرکت من" },
   });
 
-  return NextResponse.json({ ok: true, userId: user.id });
+  return NextResponse.json({
+    ok: true,
+    userId: user.id,
+    identifierKind: id.kind,
+  });
 }

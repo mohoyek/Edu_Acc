@@ -12,6 +12,7 @@ import {
   type BuilderLine,
 } from "@/components/exercise/journal-builder";
 import { FeedbackPanel } from "@/components/exercise/feedback-panel";
+import { ProfileGate } from "@/components/exercise/profile-gate";
 import type { AccountInfo, JournalLineInput, ValidationResult } from "@/lib/accounting/types";
 import { toast } from "@/hooks/use-toast";
 
@@ -42,18 +43,22 @@ export function ExerciseView({ slug }: { slug: string }) {
   const [checking, setChecking] = useState(false);
   const [solved, setSolved] = useState(false);
   const [loading, setLoading] = useState(true);
+  // گیت پروفایل: کاربر عادی با پروفایل ناقص اجازه‌ی حل تمرین ندارد
+  const [profileBlocked, setProfileBlocked] = useState(false);
 
   useEffect(() => {
     let active = true;
     Promise.all([
       fetch(`/api/exercises?slug=${encodeURIComponent(slug)}`).then((r) => r.json()),
       fetch("/api/accounts").then((r) => r.json()),
+      fetch("/api/me").then((r) => r.json()),
     ])
-      .then(([d, a]) => {
+      .then(([d, a, m]) => {
         if (!active) return;
         setDetail(d);
         setAccounts(a.accounts ?? []);
         setSolved(d.solved);
+        setProfileBlocked(m?.mustCompleteProfile === true);
         setLoading(false);
       })
       .catch(() => {
@@ -108,6 +113,11 @@ export function ExerciseView({ slug }: { slug: string }) {
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
+  }
+
+  // گیت پروفایل — قبل از نمایش تمرین
+  if (profileBlocked) {
+    return <ProfileGate />;
   }
 
   if (!detail) {

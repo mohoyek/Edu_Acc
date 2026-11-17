@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
+import { isProfileComplete } from "@/lib/profile";
 import { validateEntry } from "@/lib/accounting/validate-entry";
 import type { JournalLineInput } from "@/lib/accounting/types";
 import { syncUserStreak } from "@/lib/progress-server";
@@ -25,6 +26,17 @@ export async function POST(req: Request) {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "ورود لازم است" }, { status: 401 });
+  }
+
+  // گیت پروفایل: کاربر عادی تا پروفایلش (نام، نام خانوادگی، شماره تماس) کامل نشود، نمی‌تواند تمرین حل کند
+  if (user.role !== "ADMIN" && !isProfileComplete(user)) {
+    return NextResponse.json(
+      {
+        error: "برای حل تمرین ابتدا پروفایل خود را تکمیل کنید (نام، نام خانوادگی و شماره تماس)",
+        code: "PROFILE_INCOMPLETE",
+      },
+      { status: 403 },
+    );
   }
 
   const body = await req.json().catch(() => null);

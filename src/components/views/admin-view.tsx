@@ -54,7 +54,7 @@ interface AdminUserRow {
   firstName: string | null;
   lastName: string | null;
   username: string | null;
-  email: string;
+  email: string | null;
   phone: string | null;
   role: string;
   isActive: boolean;
@@ -90,7 +90,7 @@ interface ResetRequest {
     id: string;
     name: string | null;
     username?: string | null;
-    email: string;
+    email: string | null;
     phone: string | null;
     isActive?: boolean;
     createdAt?: string;
@@ -319,7 +319,11 @@ export function AdminView() {
         toast({ title: "درخواست رد شد" });
       } else {
         setTempDialog({
-          name: data.user?.name ?? data.user?.email ?? "کاربر",
+          name:
+            data.user?.name ??
+            data.user?.username ??
+            data.user?.email ??
+            "کاربر",
           password: data.tempPassword,
         });
       }
@@ -505,7 +509,7 @@ export function AdminView() {
                     <p className="font-bold text-foreground">
                       {r.user.name ?? "بدون نام"}
                       <span className="mr-2 text-xs font-normal text-muted-foreground" dir="ltr">
-                        {r.user.email}
+                        {r.user.username ?? r.user.email ?? "—"}
                       </span>
                     </p>
                     <p className="text-xs text-muted-foreground">
@@ -557,7 +561,7 @@ export function AdminView() {
                         <TableCell>
                           <span className="font-medium">{h.user.name ?? "بدون نام"}</span>
                           <span className="mr-2 text-xs text-muted-foreground" dir="ltr">
-                            {h.user.email}
+                            {h.user.username ?? h.user.email ?? "—"}
                           </span>
                         </TableCell>
                         <TableCell>
@@ -744,8 +748,7 @@ function AdminUserRowView({
             )}
           </div>
           <span className="text-xs text-muted-foreground" dir="ltr">
-            {user.username ? `${user.username} · ` : ""}
-            {user.email}
+            {[user.username, user.email].filter(Boolean).join(" · ") || "—"}
           </span>
         </TableCell>
         <TableCell className="text-sm" dir="ltr">

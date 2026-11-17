@@ -12,10 +12,7 @@ import { toast } from "@/hooks/use-toast";
 
 export function RegisterView() {
   const navigate = useNavigate();
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -26,13 +23,7 @@ export function RegisterView() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          password,
-          firstName,
-          lastName,
-          phone: phone || undefined,
-        }),
+        body: JSON.stringify({ identifier, password }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -46,7 +37,7 @@ export function RegisterView() {
       }
       // ورود خودکار
       const sign = await signIn("credentials", {
-        email,
+        email: identifier,
         password,
         redirect: false,
       });
@@ -60,9 +51,10 @@ export function RegisterView() {
       }
       toast({
         title: "خوش آمدی!",
-        description: "ثبت‌نام موفق بود و وارد شدی.",
+        description: "ثبت‌نام موفق بود؛ اول پروفایلت را تکمیل کن.",
       });
-      navigate("/dashboard");
+      // بعد از ثبت‌نام، مستقیم به صفحه‌ی تکمیل پروفایل
+      navigate("/profile");
     } catch {
       toast({
         title: "خطا",
@@ -82,56 +74,21 @@ export function RegisterView() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="firstName">نام</Label>
-                <Input
-                  id="firstName"
-                  type="text"
-                  required
-                  placeholder="مثلاً علی"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="lastName">نام خانوادگی</Label>
-                <Input
-                  id="lastName"
-                  type="text"
-                  required
-                  placeholder="مثلاً رضایی"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                />
-              </div>
-            </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">شماره تماس (اختیاری)</Label>
+              <Label htmlFor="identifier">شماره تماس یا نام کاربری</Label>
               <Input
-                id="phone"
-                type="tel"
-                dir="ltr"
-                inputMode="tel"
-                placeholder="09123456789"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                برای اعلام رمز موقت در صورت فراموشی، شماره را وارد کنید.
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">ایمیل</Label>
-              <Input
-                id="email"
-                type="email"
+                id="identifier"
+                type="text"
                 required
                 dir="ltr"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                inputMode="text"
+                placeholder="09123456789 یا MoHoYek"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
               />
+              <p className="text-xs text-muted-foreground">
+                با همین شماره یا نام کاربری، هر بار وارد می‌شوی.
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">رمز عبور (حداقل ۶ کاراکتر)</Label>
@@ -146,6 +103,10 @@ export function RegisterView() {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
+            <p className="rounded-lg bg-muted/60 p-3 text-xs leading-5 text-muted-foreground">
+              نیازی به ایمیل نیست. بعد از ثبت‌نام، نام و نام خانوادگی و شماره تماس‌ات
+              را در پروفایل تکمیل می‌کنی — برای حل تمرین‌ها لازم است.
+            </p>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
               ثبت‌نام
