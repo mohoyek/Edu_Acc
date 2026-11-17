@@ -9,6 +9,8 @@ import {
   LayoutDashboard,
   BookText,
   Sparkles,
+  ShieldCheck,
+  UserRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useHashRoute, useNavigate } from "@/lib/router";
@@ -21,6 +23,7 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   stage?: number; // در کدام مرحله فعال می‌شود
   match: string[]; // مسیرهایی که آیتم را «فعال» نشان می‌دهند
+  adminOnly?: boolean; // فقط برای مدیر نمایش داده می‌شود
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -29,6 +32,8 @@ const NAV_ITEMS: NavItem[] = [
   { label: "تمرین ثبت سند", path: "/exercises", icon: ClipboardList, match: ["/exercises", "/exercise"] },
   { label: "گزارش‌ها", path: "/reports", icon: BookText, match: ["/reports"] },
   { label: "فرهنگ لغت", path: "/glossary", icon: Sparkles, match: ["/glossary"] },
+  { label: "پروفایل", path: "/profile", icon: UserRound, match: ["/profile"] },
+  { label: "پنل مدیر", path: "/admin", icon: ShieldCheck, match: ["/admin"], adminOnly: true },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -36,6 +41,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const { data: session } = useSession();
   const [points, setPoints] = useState<number | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -43,9 +49,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       fetch("/api/me")
         .then((r) => r.json())
         .then((d) => {
-          if (active && d?.user) setPoints(d.user.points ?? 0);
+          if (!active || !d?.user) return;
+          setPoints(d.user.points ?? 0);
+          setIsAdmin(d.user.role === "ADMIN");
         })
         .catch(() => {});
+    } else {
+      // خروج از حساب: پاک‌سازی وضعیت در میکروتسک (نه مستقیم داخل effect)
+      queueMicrotask(() => {
+        if (!active) return;
+        setPoints(null);
+        setIsAdmin(false);
+      });
     }
     return () => {
       active = false;
@@ -59,7 +74,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* سایدبار: در دسکتاپ سمت راست (RTL) */}
         <aside className="hidden w-60 shrink-0 md:block">
           <nav className="sticky top-24 space-y-1">
-            {NAV_ITEMS.map((item) => {
+            {NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin).map((item) => {
               const active = item.match.some(
                 (m) => route === m || route.startsWith(m + "/"),
               );

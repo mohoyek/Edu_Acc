@@ -12,7 +12,9 @@ import { toast } from "@/hooks/use-toast";
 
 export function RegisterView() {
   const navigate = useNavigate();
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,7 +26,13 @@ export function RegisterView() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, name: name || undefined }),
+        body: JSON.stringify({
+          email,
+          password,
+          firstName,
+          lastName,
+          phone: phone || undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -74,15 +82,44 @@ export function RegisterView() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">نام</Label>
+                <Input
+                  id="firstName"
+                  type="text"
+                  required
+                  placeholder="مثلاً علی"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">نام خانوادگی</Label>
+                <Input
+                  id="lastName"
+                  type="text"
+                  required
+                  placeholder="مثلاً رضایی"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                />
+              </div>
+            </div>
             <div className="space-y-2">
-              <Label htmlFor="name">نام (اختیاری)</Label>
+              <Label htmlFor="phone">شماره تماس (اختیاری)</Label>
               <Input
-                id="name"
-                type="text"
-                placeholder="نام شما"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                id="phone"
+                type="tel"
+                dir="ltr"
+                inputMode="tel"
+                placeholder="09123456789"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
               />
+              <p className="text-xs text-muted-foreground">
+                برای اعلام رمز موقت در صورت فراموشی، شماره را وارد کنید.
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">ایمیل</Label>

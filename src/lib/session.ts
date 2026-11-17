@@ -13,9 +13,14 @@ export async function getCurrentUser() {
       id: true,
       email: true,
       name: true,
+      firstName: true,
+      lastName: true,
+      phone: true,
+      role: true,
       points: true,
       level: true,
       streak: true,
+      createdAt: true,
     },
   });
   return user;

@@ -16,6 +16,8 @@ import { GlossaryView } from "@/components/views/glossary-view";
 import { ExercisesView } from "@/components/views/exercises-view";
 import { ExerciseView } from "@/components/views/exercise-view";
 import { ReportsView } from "@/components/views/reports-view";
+import { ProfileView } from "@/components/views/profile-view";
+import { AdminView } from "@/components/views/admin-view";
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -90,6 +92,10 @@ export default function Home() {
       view = <ExerciseView key={exerciseMatch.slug} slug={exerciseMatch.slug} />;
     } else if (route === "/reports") {
       view = <ReportsView />;
+    } else if (route === "/profile") {
+      view = <ProfileView />;
+    } else if (route === "/admin") {
+      view = <AdminView />;
     } else {
       view = <DashboardView />;
     }

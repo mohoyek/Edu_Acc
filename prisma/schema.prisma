@@ -16,7 +16,11 @@ datasource db {
 model User {
   id              String   @id @default(cuid())
   email           String   @unique
-  name            String?
+  name            String? // نام نمایشی (ترکیب نام + نام خانوادگی)
+  firstName       String?
+  lastName        String?
+  phone           String? // شماره تماس نرمال‌شده (۰ + ۱۰ رقم)
+  role            String   @default("USER") // USER | ADMIN (بدون enum)
   passwordHash    String
   points          Int      @default(0)
   level           Int      @default(1)
@@ -30,6 +34,24 @@ model User {
   quizAttempts     QuizAttempt[]
   exerciseAttempts ExerciseAttempt[]
   userBadges       UserBadge[]
+  resetRequests    PasswordResetRequest[]
+  resolvedRequests PasswordResetRequest[] @relation("ResolvedRequests")
+}
+
+// درخواست فراموشی رمز عبور — کاربر درخواست می‌دهد، مدیر آن را می‌بیند و رمز موقت می‌سازد.
+model PasswordResetRequest {
+  id         String    @id @default(cuid())
+  userId     String
+  status     String    @default("PENDING") // PENDING | RESOLVED | REJECTED (بدون enum)
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+  resolvedBy String?   // شناسه مدیر رسیدگی‌کننده
+
+  user     User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resolver User? @relation("ResolvedRequests", fields: [resolvedBy], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([userId])
 }
 
 model Company {
